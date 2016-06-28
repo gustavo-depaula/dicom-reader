@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['..\\prot\xf3tipo neuro 1\\main.py'],
+a = Analysis(['..\\prot\xf3tipo neuro\\main.py'],
              pathex=['C:\\Users\\gdpau\\Desktop\\PROTTI~1'],
              binaries=None,
              datas=None,
@@ -22,12 +22,12 @@ exe = EXE(pyz,
           name='main',
           debug=False,
           strip=False,
-          upx=False,
-          console=True )
+          upx=True,
+          console=False , icon='icon.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
                a.datas,
                strip=False,
-               upx=False,
+               upx=True,
                name='main')

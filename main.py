@@ -7,6 +7,7 @@ import glob
 import dicom
 import sys  # Pegar infos do sistema
 from natsort import natsorted
+import pyqtgraph
 import os
 import vtk
 import numpy
@@ -26,9 +27,13 @@ class MainWindow(QtGui.QMainWindow, design.Ui_MainWindow):
         self.actionSelecionar_Pasta.triggered.connect(self.browse_folder)
         self.btnLeft.clicked.connect(self.toTheLetf)
         self.btnRight.clicked.connect(self.toRight)
+        imv = self.graphicsView
+        imv.ui.roiBtn.hide()
 
+        imv.ui.menuBtn.hide()
+        imv.ui.histogram.hide()
         self.hSlider.valueChanged.connect(self.changeWithSlider)
-
+        self.btnXtra.clicked.connect(self.showBtns)
 
 
         global ArrayDicom
@@ -62,6 +67,17 @@ class MainWindow(QtGui.QMainWindow, design.Ui_MainWindow):
             # store the raw image data
             ArrayDicom[:, :, lstFilesDCM.index(filenameDCM)] = ds.pixel_array
 
+
+    def showBtns(self):
+        imv = self.graphicsView
+        if imv.ui.roiBtn.isVisible():
+            imv.ui.roiBtn.hide()
+            imv.ui.menuBtn.hide()
+            imv.ui.histogram.hide()
+        else:
+            imv.ui.roiBtn.show()
+            imv.ui.menuBtn.show()
+            imv.ui.histogram.show()
 
     def dumpDicomImg(self, index):
         global ArrayDicom
