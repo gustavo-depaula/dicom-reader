@@ -1,42 +1,45 @@
 # coding=utf-8
 # -*- coding: utf-8 -*-
+# made by gustavo-depaula
 
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtGui import QApplication
+from natsort import natsorted
+from design import design  # Neste arquivo está a MainWindow que foi desenhada
 import glob
 import dicom
 import sys  # Pegar infos do sistema
-from natsort import natsorted
-import pyqtgraph
 import os
-import vtk
 import numpy
-from design import design  # Neste arquivo está a MainWindow que foi desenhada
-
-dcmFiles = [] # lista onde guarda os arquivos da pasta selecionada
-index = 0
-ArrayDicom = []
+import pyqtgraph
+import vtk
 
 class MainWindow(QtGui.QMainWindow, design.Ui_MainWindow):
+    dcmFiles = []  # lista onde guarda os arquivos da pasta selecionada
+    index = 0
+    ArrayDicom = []
+
     def __init__(self, parent=None):
         super(self.__class__, self).__init__()
         self.setupUi(self)
         self.setWindowTitle("Project N")
         self.setWindowIcon(QtGui.QIcon('design\\brain_icon2.png'))
 
+        imv = self.graphicsView
+
+        #  esconder as coisas denecessárias para a maioria dos usos
+        imv.ui.roiBtn.hide()
+        imv.ui.menuBtn.hide()
+        imv.ui.histogram.hide()
+
+        #configuração dos btns
         self.actionSelecionar_Pasta.triggered.connect(self.browse_folder)
         self.btnLeft.clicked.connect(self.toTheLetf)
         self.btnRight.clicked.connect(self.toRight)
-        imv = self.graphicsView
-        imv.ui.roiBtn.hide()
-
-        imv.ui.menuBtn.hide()
-        imv.ui.histogram.hide()
         self.hSlider.valueChanged.connect(self.changeWithSlider)
         self.btnXtra.clicked.connect(self.showBtns)
 
 
-        global ArrayDicom
         PathDicom = "./dicom_images/"
         lstFilesDCM = []  # create an empty list
         for dirName, subdirList, fileList in os.walk(PathDicom):
@@ -58,70 +61,25 @@ class MainWindow(QtGui.QMainWindow, design.Ui_MainWindow):
         z = numpy.arange(0.0, (ConstPixelDims[2] + 1) * ConstPixelSpacing[2], ConstPixelSpacing[2])
 
         # The array is sized based on 'ConstPixelDims'
-        ArrayDicom = numpy.zeros(ConstPixelDims, dtype=RefDs.pixel_array.dtype)
+        self.ArrayDicom = numpy.zeros(ConstPixelDims, dtype=RefDs.pixel_array.dtype)
 
         # loop through all the DICOM files
         for filenameDCM in lstFilesDCM:
             # read the file
             ds = dicom.read_file(filenameDCM)
             # store the raw image data
-            ArrayDicom[:, :, lstFilesDCM.index(filenameDCM)] = ds.pixel_array
+            self.ArrayDicom[:, :, lstFilesDCM.index(filenameDCM)] = ds.pixel_array
 
 
-    def showBtns(self):
+    def dumpDicomImg(self):
         imv = self.graphicsView
-        if imv.ui.roiBtn.isVisible():
-            imv.ui.roiBtn.hide()
-            imv.ui.menuBtn.hide()
-            imv.ui.histogram.hide()
-        else:
-            imv.ui.roiBtn.show()
-            imv.ui.menuBtn.show()
-            imv.ui.histogram.show()
-
-    def dumpDicomImg(self, index):
-        global ArrayDicom
-        imv = self.graphicsView
-        imv.setImage(ArrayDicom[:, :, index])
+        imv.setImage(self.ArrayDicom[:, :, self.index])
         imv.getView()
 
-    def browse_folder(self):
-        global dcmFiles
-        dcmFiles = natsorted(glob.glob("dicom_images\*.dcm"))
-        self.hSlider.setMaximum(len(dcmFiles) - 1)
-        self.dumpDicomInfo(0)
-        self.dumpDicomImg(0)
-        #directory = QtGui.QFileDialog.getExistingDirectory(self, "Escolha uma pasta!")
-
-        #path = unicode(directory.toUtf8(), encoding="UTF-8") + "/*.dcm"
-        #dcmFiles = glob.glob(path)
-
-    def toRight(self):
-        global index
-        if index + 1 != len(dcmFiles):
-            index += 1
-            self.hSlider.setValue(index)
-            self.dumpDicomInfo(index)
-            self.dumpDicomImg(index)
-
-    def toTheLetf(self):
-        global index
-        if index > 0:
-            index = index - 1
-            self.hSlider.setValue(index)
-            self.dumpDicomInfo(index)
-            self.dumpDicomImg(index)
-
-    def changeWithSlider(self):
-        global index
-        index = self.hSlider.value()
-        self.dumpDicomInfo(index)
-        self.dumpDicomImg(index)
-
-    def dumpDicomInfo(self, index):
+    def dumpDicomInfo(self):
         self.listInfo.clear()
 
-        file = dcmFiles[index]
+        file = self.dcmFiles[self.index]
         self.listInfo.addItem("file: %s" % file)
         data = dicom.read_file("%s" % file)
 
@@ -134,6 +92,42 @@ class MainWindow(QtGui.QMainWindow, design.Ui_MainWindow):
             for k in keysWeWant:
                 if key == k:
                     self.listInfo.addItem("%s : %s" % (key, value))
+
+    def browse_folder(self):
+        self.dcmFiles = natsorted(glob.glob("dicom_images\*.dcm"))
+        self.hSlider.setMaximum(len(self.dcmFiles) - 1)
+        self.dumpDicomInfo()
+        self.dumpDicomImg()
+
+    def toRight(self):
+        if self.index + 1 != len(self.dcmFiles):
+            self.index += 1
+            self.hSlider.setValue(self.index)
+            self.dumpDicomInfo()
+            self.dumpDicomImg()
+
+    def toTheLetf(self):
+        if self.index > 0:
+            self.index -= 1
+            self.hSlider.setValue(self.index)
+            self.dumpDicomInfo()
+            self.dumpDicomImg()
+
+    def changeWithSlider(self):
+        self.index = self.hSlider.value()
+        self.dumpDicomInfo()
+        self.dumpDicomImg()
+
+    def showBtns(self):
+        imv = self.graphicsView
+        if imv.ui.roiBtn.isVisible():
+            imv.ui.roiBtn.hide()
+            imv.ui.menuBtn.hide()
+            imv.ui.histogram.hide()
+        else:
+            imv.ui.roiBtn.show()
+            imv.ui.menuBtn.show()
+            imv.ui.histogram.show()
 
 
 def main():
